@@ -77,8 +77,6 @@ int
 main (void)
 {
   char **argv;
-  printf("at the starting of the week...\n");
-  printf("Do I need to compile... \n");
  /* Clear BSS. */  
   bss_init ();
 

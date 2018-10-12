@@ -30,6 +30,8 @@ static void busy_wait (int64_t loops);
 static void real_time_sleep (int64_t num, int32_t denom);
 static void real_time_delay (int64_t num, int32_t denom);
 
+static struct list list_sleep; // stores the threads that needs to awaken after given ticks.
+
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
    and registers the corresponding interrupt. */
 void
@@ -37,6 +39,7 @@ timer_init (void)
 {
   pit_configure_channel (0, 2, TIMER_FREQ);
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
+  list_init(&list_sleep);
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -84,16 +87,41 @@ timer_elapsed (int64_t then)
   return timer_ticks () - then;
 }
 
+// comparator: sort from lower to higher ticks.
+bool
+ticks_comparator( struct list_elem *a, struct list_elem *b, void *aux UNUSED){
+  struct thread *t1 = list_entry (a, struct thread, elem);
+  struct thread *t2 = list_entry (b, struct thread, elem);
+  return t1->ticks < t2->ticks;
+}
+
 /* Sleeps for approximately TICKS timer ticks.  Interrupts must
    be turned on. */
 void
 timer_sleep (int64_t ticks) 
 {
-  int64_t start = timer_ticks ();
+  //printf("%d  ",++c);
+  //printf("%d \n" , timer_ticks());
 
-  ASSERT (intr_get_level () == INTR_ON);
-  while (timer_elapsed (start) < ticks) 
-    thread_yield ();
+  if(ticks < 1){
+    return;
+  }
+  
+  struct thread *t = thread_current();
+  printf("tid: %d \n" , t->tid);
+  int64_t start = timer_ticks ();
+  enum intr_level old_level = intr_disable ();
+
+  t->ticks = start + ticks;
+  printf( "ticks : %i \n" , t->ticks);
+  list_insert_ordered(&list_sleep, &t->elem,ticks_comparator,NULL);
+  thread_block();
+
+  intr_set_level (old_level);
+
+  // ASSERT (intr_get_level () == INTR_ON);
+  // while (timer_elapsed (start) < ticks) 
+  //   thread_yield ();
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -170,9 +198,27 @@ timer_print_stats (void)
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
+
   ticks++;
-  thread_tick ();
+  thread_tick();
+  struct list_elem *e;
+  int64_t current_ticks = timer_ticks();
+  struct thread *t;
+
+  while(!list_empty(&list_sleep)){
+    e = list_front(&list_sleep);
+    t = list_entry(e, struct thread, elem);
+    if( t->ticks <= current_ticks){
+      list_remove(e);
+      thread_unblock(t);
+    }
+    else{
+      break;
+    }
+
+  }
 }
+
 
 /* Returns true if LOOPS iterations waits for more than one timer
    tick, otherwise false. */
@@ -244,3 +290,6 @@ real_time_delay (int64_t num, int32_t denom)
   ASSERT (denom % 1000 == 0);
   busy_wait (loops_per_tick * num / 1000 * TIMER_FREQ / (denom / 1000)); 
 }
+
+
+
