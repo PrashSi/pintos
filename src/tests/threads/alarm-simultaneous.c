@@ -87,6 +87,7 @@ sleeper (void *test_)
   for (i = 1; i <= test->iterations; i++) 
     {
       int64_t sleep_until = test->start + i * 10;
+      //printf("sleep until %i \n", sleep_until);
       timer_sleep (sleep_until - timer_ticks ());
       *test->output_pos++ = timer_ticks () - test->start;
       thread_yield ();

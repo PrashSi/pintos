@@ -89,7 +89,7 @@ timer_elapsed (int64_t then)
 
 // comparator: sort from lower to higher ticks.
 bool
-ticks_comparator( struct list_elem *a, struct list_elem *b, void *aux UNUSED){
+ticks_comparator(const struct list_elem *a,const struct list_elem *b, void *aux UNUSED){
   struct thread *t1 = list_entry (a, struct thread, elem);
   struct thread *t2 = list_entry (b, struct thread, elem);
   return t1->ticks < t2->ticks;
@@ -106,14 +106,12 @@ timer_sleep (int64_t ticks)
   if(ticks < 1){
     return;
   }
-  
-  struct thread *t = thread_current();
-  printf("tid: %d \n" , t->tid);
-  int64_t start = timer_ticks ();
   enum intr_level old_level = intr_disable ();
 
+  struct thread *t = thread_current();
+  int64_t start = timer_ticks ();
   t->ticks = start + ticks;
-  printf( "ticks : %i \n" , t->ticks);
+  // printf( "ticks : %i \n" , t->ticks);
   list_insert_ordered(&list_sleep, &t->elem,ticks_comparator,NULL);
   thread_block();
 
@@ -198,24 +196,27 @@ timer_print_stats (void)
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
-
   ticks++;
   thread_tick();
+  //printf("ticks % i \n",ticks);
   struct list_elem *e;
-  int64_t current_ticks = timer_ticks();
+  //int64_t current_ticks = timer_ticks();
   struct thread *t;
 
   while(!list_empty(&list_sleep)){
     e = list_front(&list_sleep);
     t = list_entry(e, struct thread, elem);
-    if( t->ticks <= current_ticks){
+    if( t->ticks <= ticks)
+    {
+      // printf("thread tid %d ticks %i ", t->tid,t->ticks);
+      // printf("ticks % i \n",ticks);
       list_remove(e);
       thread_unblock(t);
     }
-    else{
+    else
+    {
       break;
     }
-
   }
 }
 
