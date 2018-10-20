@@ -202,6 +202,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
   struct list_elem *e;
   //int64_t current_ticks = timer_ticks();
   struct thread *t;
+  bool check_priority = false;
 
   while(!list_empty(&list_sleep)){
     e = list_front(&list_sleep);
@@ -212,11 +213,17 @@ timer_interrupt (struct intr_frame *args UNUSED)
       // printf("ticks % i \n",ticks);
       list_remove(e);
       thread_unblock(t);
+
+      check_priority = true;
     }
     else
     {
       break;
     }
+  }
+
+  if(check_priority){
+    intr_yield_on_return();
   }
 }
 

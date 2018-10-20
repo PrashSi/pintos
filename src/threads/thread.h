@@ -140,3 +140,9 @@ int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
 #endif /* threads/thread.h */
+
+
+// custom functions 
+
+void thread_check_priority(void);
+bool priority_comparator(const struct list_elem *a, const struct list_elem *b, void *aux);
