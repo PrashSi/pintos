@@ -101,6 +101,12 @@ struct thread
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
+
+    // custom variables
+    int original_priority;
+
+    struct list locks; //list of locks.
+    struct lock *wait_lock; //waiting for the lock.
   };
 
 /* If false (default), use round-robin scheduler.
@@ -146,3 +152,4 @@ int thread_get_load_avg (void);
 
 void thread_check_priority(void);
 bool priority_comparator(const struct list_elem *a, const struct list_elem *b, void *aux);
+void thread_donate_priority(struct thread *target, int donated_priority);

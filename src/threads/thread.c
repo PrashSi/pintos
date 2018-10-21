@@ -466,6 +466,11 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
 
+  //custom initialization
+  t->wait_lock = NULL;
+  list_init(&t->locks);
+  t->original_priority = priority;
+
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);
@@ -614,4 +619,18 @@ priority_comparator(const struct list_elem *a, const struct list_elem *b, void *
       return true;
     }
   return false;
+}
+void 
+thread_donate_priority(struct thread *target, int donated_priority)
+{
+  enum intr_level old_level = intr_disable ();
+  target->priority = donated_priority;
+
+  if(target->status == THREAD_READY)
+  {
+    // sort the ready list.
+    list_sort(&ready_list, priority_comparator, NULL);
+  }
+
+    intr_set_level (old_level);
 }
