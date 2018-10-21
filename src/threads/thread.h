@@ -5,6 +5,7 @@
 #include <list.h>
 #include <stdint.h>
 
+
 /* States in a thread's life cycle. */
 enum thread_status
   {
@@ -107,6 +108,8 @@ struct thread
 
     struct list locks; //list of locks.
     struct lock *wait_lock; //waiting for the lock.
+    int recent_cpu;
+    int nice;
   };
 
 /* If false (default), use round-robin scheduler.
@@ -148,8 +151,13 @@ int thread_get_load_avg (void);
 #endif /* threads/thread.h */
 
 
-// custom functions 
-
+// custom functions for priority scheduling
 void thread_check_priority(void);
 bool priority_comparator(const struct list_elem *a, const struct list_elem *b, void *aux);
 void thread_donate_priority(struct thread *target, int donated_priority);
+
+//custom functions for mlfqs
+void mlfqs_update_priority(struct thread *);
+void mlfqs_update_load_avg(void);
+void mlfqs_update(void);
+void mlfqs_increment_recent_cpu(void);

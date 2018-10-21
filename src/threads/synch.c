@@ -115,8 +115,7 @@ sema_up (struct semaphore *sema)
   old_level = intr_disable ();
   if (!list_empty (&sema->waiters)) {
     list_sort (&sema->waiters, priority_comparator, NULL);
-    thread_unblock (list_entry (list_pop_front (&sema->waiters),
-                                struct thread, elem));
+    thread_unblock (list_entry (list_pop_front (&sema->waiters), struct thread, elem));
   }
   sema->value++;
 
@@ -203,9 +202,13 @@ lock_acquire (struct lock *lock)
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
 
+
+  enum intr_level old_level;
+
+
   struct thread *cur = thread_current();
 
-  if(lock->holder != NULL)
+  if(lock->holder != NULL && !thread_mlfqs)
   {
     cur->wait_lock = lock;
 
@@ -215,25 +218,27 @@ lock_acquire (struct lock *lock)
     while(wait && depth < 8)
     {
       //check for donations
-      if(wait->holder->priority > cur->priority)
+      if(wait->holder->priority >= cur->priority)
         break;
-
       wait->lock_priority = cur->priority;
       thread_donate_priority(wait->holder, cur->priority);
-
       wait = wait->holder->wait_lock;
       depth++;
     }
   }
 
   sema_down (&lock->semaphore);
-  struct thread *t = thread_current();
 
-  t->wait_lock = NULL;
-  lock->lock_priority = t->priority;
-  list_insert_ordered (&t->locks, &lock->lock_elem, lock_priority_comparator, NULL);
+  old_level = intr_disable ();
 
-  lock->holder = t;
+  if(!thread_mlfqs)
+  {
+    cur->wait_lock = NULL;
+    lock->lock_priority = cur->priority;
+    list_insert_ordered (&cur->locks, &lock->lock_elem, lock_priority_comparator, NULL);
+  }
+  lock->holder = cur;
+  intr_set_level (old_level);
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -267,33 +272,35 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
 
+  enum intr_level old_level;
+
+  old_level = intr_disable ();
+
   struct thread *cur = thread_current();
 
-
+  if (!thread_mlfqs){
   list_remove(&lock->lock_elem);
-
   if(list_empty(&cur->locks))
   {
     //reset priority
     cur->priority = cur->original_priority;
   }
-
   else
   {
       list_sort(&cur->locks, lock_priority_comparator, NULL);
-
       struct lock *high = list_entry(list_front(&cur->locks), struct lock, lock_elem);
-
       if(high->lock_priority < lock->lock_priority)
       {
-        // resest new priority
+        // reset new priority
         cur->priority = high->lock_priority;
       }
-
   }
-  
+  }
   lock->holder = NULL;
   sema_up (&lock->semaphore);
+
+  intr_set_level (old_level);
+
 }
 
 /* Returns true if the current thread holds LOCK, false

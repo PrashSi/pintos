@@ -7,6 +7,7 @@
 #include "threads/interrupt.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
+#include "threads/fixed-points.h"
   
 /* See [8254] for hardware details of the 8254 timer chip. */
 
@@ -88,7 +89,7 @@ timer_elapsed (int64_t then)
 }
 
 // comparator: sort from lower to higher ticks.
-bool
+static bool
 ticks_comparator(const struct list_elem *a,const struct list_elem *b, void *aux UNUSED){
   struct thread *t1 = list_entry (a, struct thread, elem);
   struct thread *t2 = list_entry (b, struct thread, elem);
@@ -198,11 +199,25 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick();
-  //printf("ticks % i \n",ticks);
+  
   struct list_elem *e;
-  //int64_t current_ticks = timer_ticks();
+ 
   struct thread *t;
   bool check_priority = false;
+
+  if(thread_mlfqs)
+  {
+    mlfqs_increment_recent_cpu(); 
+    if(ticks%TIMER_FREQ==0)
+    {
+      mlfqs_update();
+    }
+    if(ticks % 4 == 0)
+    {
+      mlfqs_update_priority(thread_current());
+    }
+  }
+
 
   while(!list_empty(&list_sleep)){
     e = list_front(&list_sleep);
