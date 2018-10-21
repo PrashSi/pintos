@@ -352,11 +352,10 @@ thread_get_priority (void)
   return thread_current ()->priority;
 }
 
-/* Sets the current thread's nice value to NICE. */
+/*set the nice value of a thread */
 void
 thread_set_nice (int nice) 
 {
-  /* Not yet implemented. */
   enum intr_level old_level = intr_disable ();
   thread_current()->nice = nice;
   mlfqs_update_priority (thread_current ());
@@ -368,28 +367,22 @@ thread_set_nice (int nice)
 int
 thread_get_nice (void) 
 {
-  /* Not yet implemented. */
-  //return 0;
   return thread_current()->nice;
 }
 
-/* Returns 100 times the system load average. */
+/* Returns load average. */
 int
 thread_get_load_avg (void) 
 {
-  /* Not yet implemented. */
-  //return 0;
-  int value= float_to_int_round(mult_mixed(load_avg,100));
+  int value= fraction_round(multiply(load_avg,100));
   return value;
 }
 
-/* Returns 100 times the current thread's recent_cpu value. */
+/* Returns the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) 
 {
-  /* Not yet implemented. */
-  //return 0;
-  int value=float_to_int_round(mult_mixed(thread_current()->recent_cpu,100));
+  int value=fraction_round(multiply(thread_current()->recent_cpu,100));
   return value;
 }
 
@@ -672,11 +665,11 @@ void mlfqs_update_priority(struct thread *t)
 {
   if(thread_current() != idle_thread)
   {
-    int priority_val = int_to_float(PRI_MAX);
-    int recent_cpu_val = div_mixed(t->recent_cpu, 4);
-    priority_val = sub_float(priority_val, recent_cpu_val);
+    int priority_val = int_fraction(PRI_MAX);
+    int recent_cpu_val = divison(t->recent_cpu, 4);
+    priority_val = subtraction(priority_val, recent_cpu_val);
     int nice_val = 2*t->nice;
-    t->priority = float_to_int(sub_mixed(priority_val, 2*t->nice));
+    t->priority = fraction(subtraction_fraction(priority_val, 2*t->nice));
     if(t->priority < PRI_MIN)
       {
         t->priority = PRI_MIN;
@@ -697,10 +690,10 @@ void mlfqs_update_load_avg(void)
   {
     count++;
   }
-  count+= list_size(&ready_list);
-  int load_avg_1 = mult_float(div_mixed(int_to_float(59),60),load_avg);
-  int load_avg_2 = div_mixed(int_to_float(count),60);
-  load_avg = add_float(load_avg_1,load_avg_2);
+  count+= list_size(&ready_list); 
+  int load_avg_1 = multiply_fraction(divison(int_fraction(59),60),load_avg);
+  int load_avg_2 = divison(int_fraction(count),60);
+  load_avg = addition(load_avg_1,load_avg_2);
 
 }
 
@@ -715,8 +708,8 @@ void mlfqs_update(void)
     struct thread *cur = list_entry(e,struct thread, allelem);
     if(cur != idle_thread)
     {
-      int load_val = div_float(mult_mixed(load_avg, 2), add_mixed(mult_mixed(load_avg, 2), 1));
-      cur->recent_cpu = add_mixed(mult_float(load_val, cur->recent_cpu), cur->nice);
+      int load_val = divison_fraction(multiply(load_avg, 2), addition_fraction(multiply(load_avg, 2), 1));
+      cur->recent_cpu = addition_fraction(multiply_fraction(load_val, cur->recent_cpu), cur->nice);
       mlfqs_update_priority(cur);
     }
     e=list_next(e);
@@ -728,7 +721,8 @@ void mlfqs_increment_recent_cpu(void)
 {
   if(thread_current() != idle_thread)
     {
-      int incr_val = add_mixed(thread_current()->recent_cpu,1);
+      int incr_val = addition_fraction(thread_current()->recent_cpu,1);
       thread_current()->recent_cpu = incr_val;
     }
 }
+
