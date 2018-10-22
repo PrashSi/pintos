@@ -93,7 +93,7 @@ struct thread
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
-    int64_t ticks;  // timer ticks duration if thread wants to sleep.
+    
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -104,10 +104,11 @@ struct thread
     unsigned magic;                     /* Detects stack overflow. */
 
     // custom variables
+    int64_t ticks;  // timer ticks duration if thread wants to sleep.
     int original_priority;
 
     struct list locks; //list of locks.
-    struct lock *wait_lock; //waiting for the lock.
+    struct lock *wait_lock; //waiting for the lock held by other thread.
     int recent_cpu;
     int nice;
   };

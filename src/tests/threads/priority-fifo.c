@@ -63,10 +63,12 @@ test_priority_fifo (void)
       thread_create (name, PRI_DEFAULT + 1, simple_thread_func, d);
     }
 
+    struct thread *c = thread_current();
   thread_set_priority (PRI_DEFAULT);
   /* All the other threads now run to termination here. */
   ASSERT (lock.holder == NULL);
 
+  printf("%d \n my priority \n", c->priority );
   cnt = 0;
   for (; output < op; output++) 
     {

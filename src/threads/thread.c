@@ -341,8 +341,18 @@ thread_set_priority (int new_priority)
 {
   if (thread_mlfqs)
     return;
-  thread_current ()->priority = new_priority;
-  thread_check_priority();
+  enum intr_level old_level = intr_disable ();
+  struct thread *t = thread_current ();
+  if (new_priority < t->priority && list_empty (&t->locks))
+    { // if we change the donated priority then there will be problem.
+    // Donator will starve and first in first out test were failing.
+      t->priority = new_priority;
+      thread_check_priority();
+    }
+    //someone is trying to change the original priority. 
+    //So we will preserve this in case of preemption when lock release.
+  t->original_priority = new_priority;
+  intr_set_level (old_level);
 }
 
 /* Returns the current thread's priority. */
