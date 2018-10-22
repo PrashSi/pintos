@@ -374,14 +374,18 @@ cond_wait (struct condition *cond, struct lock *lock)
 void
 cond_signal (struct condition *cond, struct lock *lock UNUSED) 
 {
+  if (list_empty (&cond->waiters)) 
+  {
+    return;
+  }
   ASSERT (cond != NULL);
   ASSERT (lock != NULL);
   ASSERT (!intr_context ());
   ASSERT (lock_held_by_current_thread (lock));
-
-  if (!list_empty (&cond->waiters)) 
-    sema_up (&list_entry (list_pop_front (&cond->waiters),
-                          struct semaphore_elem, elem)->semaphore);
+  // sorting the list based on the priority
+  list_sort (&cond->waiters, condvar_priority_comparator, NULL);
+  struct semaphore_elem *s=list_entry (list_pop_front (&cond->waiters), struct semaphore_elem, elem);
+  sema_up (&s->semaphore);
 }
 
 /* Wakes up all threads, if any, waiting on COND (protected by
@@ -399,12 +403,22 @@ cond_broadcast (struct condition *cond, struct lock *lock)
   while (!list_empty (&cond->waiters))
     cond_signal (cond, lock);
 }
-// custom methods
 
+// custom functions
 bool
 lock_priority_comparator(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
 {
   struct lock *l1 = list_entry (a, struct lock, lock_elem);
   struct lock *l2 = list_entry (b, struct lock, lock_elem);
   return l1->lock_priority > l2->lock_priority;
+}
+
+bool
+condvar_priority_comparator(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
+{
+  struct semaphore_elem *s1 = list_entry (a, struct semaphore_elem, elem);
+  struct semaphore_elem *s2 = list_entry (b, struct semaphore_elem, elem);
+  struct thread *t1 = list_entry(list_front(&s1->semaphore.waiters),struct thread, elem);
+  struct thread *t2 = list_entry(list_front(&s2->semaphore.waiters),struct thread, elem);
+  return t1->priority > t2->priority;
 }

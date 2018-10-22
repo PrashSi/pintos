@@ -55,3 +55,4 @@ void cond_broadcast (struct condition *, struct lock *);
 // custom methods
 
 bool lock_priority_comparator(const struct list_elem *a, const struct list_elem *b, void *aux);
+bool condvar_priority_comparator(const struct list_elem *a, const struct list_elem *b, void *aux);
